@@ -1,0 +1,17 @@
+{
+  "name": "exercicio-webdriver",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test/**/*.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "mocha": "^11.7.6",
+    "selenium-webdriver": "^4.44.0"
+  }
+}
