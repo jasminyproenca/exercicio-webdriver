@@ -20,9 +20,42 @@ on:
 # JOBS: etapas que serão executadas na pipeline
 # ─────────────────────────────────────────────
 jobs:
+
+  # ─────────────────────────────────────────────
+  # JOB 1: Qualidade de Código — Linter
+  # ─────────────────────────────────────────────
+  lint:
+    name: 🔍 Verificar qualidade do código
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Faz o checkout do código do repositório
+      - name: 📥 Checkout do código
+        uses: actions/checkout@v4
+
+      # 2. Configura o Node.js na versão 20 (LTS)
+      - name: ⚙️ Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Instala as dependências (inclui o ESLint via devDependencies)
+      - name: 📦 Instalar dependências
+        run: npm ci
+
+      # 4. Executa o ESLint em todos os arquivos .js do projeto
+      #    O job falha automaticamente se encontrar erros de código
+      - name: 🔍 Executar ESLint
+        run: npx eslint . --ext .js
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Testes Automatizados com Selenium
+  # ─────────────────────────────────────────────
   testes:
-    name: Executar Testes com Selenium
-    runs-on: ubuntu-latest  # Máquina virtual Linux fornecida pelo GitHub
+    name: 🧪 Executar Testes com Selenium
+    runs-on: ubuntu-latest
+    needs: lint  # Só roda se o linter passar
 
     steps:
       # 1. Faz o checkout do código do repositório
@@ -62,10 +95,10 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────
-  # JOB 2: Notificação no Telegram
+  # JOB 3: Notificação no Telegram
   # ─────────────────────────────────────────────
   notificar:
-    name: Notificar resultado no Telegram
+    name: 📬 Notificar resultado no Telegram
     runs-on: ubuntu-latest
     needs: testes          # Aguarda o job de testes terminar
     if: always()           # Executa mesmo se os testes falharem
