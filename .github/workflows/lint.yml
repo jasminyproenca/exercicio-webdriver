@@ -1,0 +1,47 @@
+name: 🔍 Qualidade de Código — Linter
+
+# ─────────────────────────────────────────────
+# TRIGGERS: quando o linter será executado
+# ─────────────────────────────────────────────
+on:
+  # 1. A cada push em qualquer branch
+  push:
+    branches:
+      - '**'
+
+  # 2. A cada pull request
+  pull_request:
+    branches:
+      - '**'
+
+  # 3. Execução manual pelo painel do GitHub Actions
+  workflow_dispatch:
+
+# ─────────────────────────────────────────────
+# JOBS
+# ─────────────────────────────────────────────
+jobs:
+  lint:
+    name: Analisar qualidade do código
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Faz o checkout do código do repositório
+      - name: 📥 Checkout do código
+        uses: actions/checkout@v4
+
+      # 2. Configura o Node.js na versão 20 (LTS)
+      - name: ⚙️ Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Instala as dependências (inclui o ESLint via devDependencies)
+      - name: 📦 Instalar dependências
+        run: npm ci
+
+      # 4. Executa o ESLint em todos os arquivos .js do projeto
+      #    O workflow falha automaticamente se o ESLint encontrar erros
+      - name: 🔍 Executar ESLint
+        run: npx eslint . --ext .js
