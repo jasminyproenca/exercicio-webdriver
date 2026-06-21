@@ -17,7 +17,10 @@ Projeto de **Integração Contínua (CI)** desenvolvido como trabalho de conclus
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 - [A Pipeline](#-a-pipeline)
   - [Triggers](#triggers-gatilhos)
-  - [Steps](#steps-etapas)
+  - [Jobs e Steps](#jobs-e-steps)
+    - [Job 1 — Linter](#job-1--linter-qualidade-de-código)
+    - [Job 2 — Testes](#job-2--testes-automatizados)
+    - [Job 3 — Notificação](#job-3--notificação-telegram)
 - [Relatório de Testes](#-relatório-de-testes)
 - [Como Executar Localmente](#-como-executar-localmente)
 - [Como Executar Manualmente no GitHub](#-como-executar-manualmente-no-github)
@@ -55,6 +58,8 @@ Projeto de **Integração Contínua (CI)** desenvolvido como trabalho de conclus
 | **Action** | Componente reutilizável que encapsula lógica complexa (ex: `actions/checkout@v4`) |
 | **Runner** | Máquina virtual onde o job é executado (ex: `ubuntu-latest`) |
 | **Artifact** | Arquivo gerado pela pipeline e armazenado para download posterior |
+| **Secret** | Variável de ambiente criptografada armazenada com segurança no GitHub |
+| **needs** | Dependência entre jobs — garante a ordem de execução na pipeline |
 
 ---
 
@@ -81,6 +86,46 @@ A expressão **cron** define um agendamento recorrente para execução automáti
 
 > ⚠️ O GitHub Actions usa **UTC** (tempo universal). O horário de Brasília (BRT) é **UTC-3**, então 14:00 BRT = 17:00 UTC.
 
+> ⚠️ O GitHub Actions **não garante pontualidade** na execução agendada. Em períodos de alta carga nos servidores — especialmente em repositórios no plano gratuito — podem ocorrer atrasos de minutos a horas. Isso é um comportamento documentado e esperado da plataforma.
+
+---
+
+### Qualidade de Código — Linter (ESLint)
+
+**Linter** é uma ferramenta de análise estática de código que verifica problemas de qualidade sem executar o programa. Ele detecta erros de sintaxe, variáveis não utilizadas, padrões problemáticos e inconsistências de estilo antes mesmo dos testes rodarem.
+
+**ESLint** é o linter padrão do ecossistema JavaScript/Node.js. Neste projeto, ele é executado como o **primeiro job da pipeline**, seguindo o princípio de **fail fast** — interromper a execução o mais cedo possível quando há um problema.
+
+**Configuração utilizada** (`.eslintrc.json`):
+```json
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "mocha": true
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "semi": ["warn", "always"]
+  }
+}
+```
+
+---
+
+### Notificação Externa — Telegram
+
+A pipeline envia uma **notificação automática** ao Telegram ao final de cada execução, informando se os testes passaram ou falharam. Isso garante visibilidade imediata do resultado sem precisar acessar o GitHub manualmente.
+
+**Como funciona:**
+1. O job `notificar` aguarda o job `testes` terminar (`needs: testes`)
+2. Sempre executa, independente do resultado (`if: always()`)
+3. Consome os **Secrets** do repositório (`TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID`) para autenticar na API do Telegram
+4. Envia uma mensagem com emoji, status, branch, autor, horário e link direto para o resultado
+
+**Secrets** são variáveis criptografadas armazenadas no GitHub. Eles nunca aparecem nos logs da pipeline — o GitHub os mascara automaticamente, garantindo segurança.
+
 ---
 
 ## 🛠 Tecnologias
@@ -91,7 +136,9 @@ A expressão **cron** define um agendamento recorrente para execução automáti
 | Mocha | ^11.7.6 | Framework de testes |
 | Selenium WebDriver | ^4.44.0 | Automação de browser |
 | Mochawesome | ^7.1.4 | Geração de relatório HTML |
+| ESLint | ^8.57.0 | Análise estática de qualidade de código |
 | GitHub Actions | — | Plataforma de CI/CD |
+| API Telegram | — | Envio de notificações da pipeline |
 
 ---
 
@@ -101,9 +148,10 @@ A expressão **cron** define um agendamento recorrente para execução automáti
 exercicio-webdriver/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml          # Definição da pipeline GitHub Actions
+│       └── ci.yml          # Pipeline completa: linter, testes e notificação
 ├── test/
 │   └── login.test.js       # Teste automatizado de login com Selenium
+├── .eslintrc.json          # Configuração do ESLint (qualidade de código)
 ├── .gitignore
 ├── package.json            # Dependências e scripts do projeto
 └── README.md
@@ -114,6 +162,17 @@ exercicio-webdriver/
 ## ⚙️ A Pipeline
 
 Arquivo: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+A pipeline é composta por **3 jobs executados em sequência**, onde cada job depende do anterior:
+
+```
+🔍 lint  ──→  🧪 testes  ──→  📬 notificar
+```
+
+> Se o **lint** falhar, os **testes** não são executados (fail fast).
+> A **notificação** sempre é enviada, mesmo que os testes falhem.
+
+---
 
 ### Triggers (Gatilhos)
 
@@ -137,13 +196,36 @@ Permite iniciar a pipeline manualmente pela interface do GitHub, útil para vali
 #### 3. Agendamento (`schedule`)
 ```yaml
   schedule:
-    - cron: '0 16 * * *'   # 13:00 horário de Brasília
+    - cron: '0 17 * * *'   # 14:00 horário de Brasília
 ```
-Executa automaticamente todo dia às 13:00 (horário de Brasília), garantindo monitoramento contínuo mesmo sem novas alterações no código.
+Executa automaticamente todo dia às 14:00 (horário de Brasília), garantindo monitoramento contínuo mesmo sem novas alterações no código.
 
 ---
 
-### Steps (Etapas)
+### Jobs e Steps
+
+#### Job 1 — Linter (Qualidade de Código)
+
+```
+📥 Checkout do código
+    └─ Baixa o código do repositório para a máquina virtual
+
+⚙️  Configurar Node.js 20
+    └─ Instala o Node.js com cache de pacotes npm
+
+📦 Instalar dependências
+    └─ Executa npm ci (instalação determinística via package-lock.json)
+
+🔍 Executar ESLint
+    └─ Analisa todos os arquivos .js em busca de erros de qualidade
+    └─ Pipeline interrompida se houver erros
+```
+
+---
+
+#### Job 2 — Testes Automatizados
+
+> Executado apenas se o **Job 1 (lint)** passar.
 
 ```
 📥 Checkout do código
@@ -163,6 +245,32 @@ Executa automaticamente todo dia às 13:00 (horário de Brasília), garantindo m
 
 📊 Publicar relatório
     └─ Salva o relatório HTML como artifact (disponível por 30 dias)
+    └─ Sempre executa, mesmo se os testes falharem
+```
+
+---
+
+#### Job 3 — Notificação Telegram
+
+> Sempre executado ao final, independente do resultado dos testes.
+
+```
+📬 Enviar notificação no Telegram
+    └─ Lê os secrets TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID
+    └─ Verifica o resultado do Job 2 (success ou failure)
+    └─ Envia mensagem com: status, branch, autor, horário e link
+```
+
+**Exemplo de mensagem recebida:**
+```
+✅ Pipeline CI — exercicio-webdriver
+
+📌 Status: Testes passaram com sucesso!
+🌿 Branch: main
+👤 Autor: jasminyproenca
+🕐 Horário: 21/06/2026 18:52 UTC
+
+🔗 Ver resultado completo
 ```
 
 ---
@@ -200,6 +308,11 @@ cd exercicio-webdriver
 npm install
 ```
 
+### Executar o linter
+```bash
+npm run lint
+```
+
 ### Executar testes (modo normal — abre o Chrome)
 ```bash
 npm test
@@ -222,7 +335,7 @@ O relatório será gerado em `mochawesome-report/relatorio-testes.html`.
 4. Clique no botão **"Run workflow"**
 5. Confirme clicando em **"Run workflow"** (botão verde)
 
-A pipeline será iniciada em segundos e o resultado ficará disponível na mesma tela.
+A pipeline será iniciada em segundos e o resultado ficará disponível na mesma tela. Ao final, uma notificação será enviada automaticamente ao Telegram.
 
 ---
 
