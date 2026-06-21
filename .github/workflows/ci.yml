@@ -1,0 +1,62 @@
+name: CI — Testes Automatizados
+
+# ─────────────────────────────────────────────
+# TRIGGERS: quando a pipeline será executada
+# ─────────────────────────────────────────────
+on:
+  # 1. Execução por push em qualquer branch
+  push:
+    branches:
+      - '**'
+
+  # 2. Execução manual pelo painel do GitHub Actions
+  workflow_dispatch:
+
+  # 3. Execução agendada — todo dia às 13:00 horário de Brasília (16:00 UTC)
+  schedule:
+    - cron: '0 16 * * *'
+
+# ─────────────────────────────────────────────
+# JOBS: etapas que serão executadas na pipeline
+# ─────────────────────────────────────────────
+jobs:
+  testes:
+    name: Executar Testes com Selenium
+    runs-on: ubuntu-latest  # Máquina virtual Linux fornecida pelo GitHub
+
+    steps:
+      # 1. Faz o checkout do código do repositório
+      - name: 📥 Checkout do código
+        uses: actions/checkout@v4
+
+      # 2. Configura o Node.js na versão 20 (LTS)
+      - name: ⚙️ Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'  # Faz cache dos pacotes npm para acelerar futuras execuções
+
+      # 3. Instala Chrome e ChromeDriver compatíveis entre si
+      #    (evita erros de versão incompatível entre browser e driver)
+      - name: 🌐 Instalar Google Chrome e ChromeDriver
+        uses: browser-actions/setup-chrome@v1
+
+      # 4. Instala as dependências do projeto (usa package-lock.json para instalação determinística)
+      - name: 📦 Instalar dependências
+        run: npm ci
+
+      # 5. Executa os testes com o reporter Mochawesome
+      #    A variável CI=true (definida automaticamente pelo GitHub Actions)
+      #    ativa o modo headless no login.test.js
+      - name: 🧪 Executar testes
+        run: npm run test:ci
+
+      # 6. Faz upload do relatório HTML como artifact da pipeline
+      #    O relatório fica disponível para download por 30 dias
+      - name: 📊 Publicar relatório de testes
+        if: always()  # Sempre publica o relatório, mesmo se os testes falharem
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-testes
+          path: mochawesome-report/
+          retention-days: 30
