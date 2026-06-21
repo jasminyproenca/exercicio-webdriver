@@ -12,9 +12,9 @@ on:
   # 2. Execução manual pelo painel do GitHub Actions
   workflow_dispatch:
 
-  # 3. Execução agendada — todo dia às 13:00 horário de Brasília (16:00 UTC)
+  # 3. Execução agendada — todo dia às 14:00 horário de Brasília (17:00 UTC)
   schedule:
-    - cron: '0 16 * * *'
+    - cron: '0 17 * * *'
 
 # ─────────────────────────────────────────────
 # JOBS: etapas que serão executadas na pipeline

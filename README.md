@@ -72,14 +72,14 @@ A expressão **cron** define um agendamento recorrente para execução automáti
 
 ```
 ┌─── minuto   (0  = no minuto zero, em ponto)
-│ ┌─ hora UTC (16 = 16:00 UTC = 13:00 horário de Brasília)
+│ ┌─ hora UTC - Tempo Universal (17 = 17:00 UTC = 14:00 horário de Brasília)
 │ │ ┌ dia do mês (* = todo dia)
 │ │ │ ┌ mês (* = todo mês)
 │ │ │ │ ┌ dia da semana (* = qualquer dia)
-0 16 * * *
+0 17 * * *
 ```
 
-> ⚠️ O GitHub Actions usa **UTC-3**. O horário de Brasília (BRT) é **UTC+3**, então 13:00 BRT = 16:00 UTC.
+> ⚠️ O GitHub Actions usa **UTC** (tempo universal). O horário de Brasília (BRT) é **UTC-3**, então 14:00 BRT = 17:00 UTC.
 
 ---
 
