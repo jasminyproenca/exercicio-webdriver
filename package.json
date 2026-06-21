@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/**/*.test.js"
+    "test": "mocha test/**/*.test.js",
+    "test:ci": "mocha test/**/*.test.js --reporter mochawesome --reporter-options reportDir=mochawesome-report,reportFilename=relatorio-testes,inline=true"
+  },
+  "mocha": {
+    "timeout": 30000,
+    "reporter": "spec"
   },
   "keywords": [],
   "author": "",
@@ -13,5 +18,10 @@
   "dependencies": {
     "mocha": "^11.7.6",
     "selenium-webdriver": "^4.44.0"
+  },
+  "devDependencies": {
+    "mochawesome": "^7.1.4",
+    "mochawesome-merge": "^5.1.1",
+    "mochawesome-report-generator": "^6.3.2"
   }
 }
